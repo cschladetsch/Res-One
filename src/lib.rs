@@ -143,16 +143,40 @@ impl Resonant {
     }
 
     pub fn apply_gesture(&mut self, gesture_type: &str, intensity: f32, direction: f32) -> Result<(), JsValue> {
-        // Convert gesture to mathematical transform
+        // Make gesture effects MUCH more dramatic and immediate
+        let dramatic_intensity = intensity * 2.0; // Double the effect
+
+        // Convert gesture to mathematical transform with enhanced effects
         let transform = match gesture_type {
-            "swipe" => self.create_rotation_transform(direction, intensity),
-            "pinch" => self.create_scale_transform(intensity),
-            "tilt" => self.create_tilt_transform(direction, intensity),
-            "smile" => self.create_brightness_transform(intensity),
+            "swipe" => {
+                // Create massive rotation with multiple axes
+                let primary = self.create_rotation_transform(direction, dramatic_intensity);
+                let secondary = self.create_rotation_transform(direction + std::f32::consts::PI/3.0, dramatic_intensity * 0.7);
+                primary * secondary
+            },
+            "pinch" => {
+                // Dramatic scaling with non-uniform effects
+                let scale_factor = 1.0 + dramatic_intensity * 3.0;
+                self.create_complex_scale_transform(scale_factor, direction)
+            },
+            "tilt" => {
+                // Complex 4D transformation
+                let tilt = self.create_tilt_transform(direction, dramatic_intensity);
+                let twist = self.create_4d_twist_transform(direction, dramatic_intensity * 0.5);
+                tilt * twist
+            },
+            "smile" => {
+                // Brightness + color shift + fractal parameter change
+                let brightness = self.create_brightness_transform(dramatic_intensity);
+                let color_shift = self.create_color_shift_transform(dramatic_intensity);
+                let params = self.create_parameter_shift_transform(dramatic_intensity);
+                brightness * color_shift * params
+            },
             _ => return Ok(()),
         };
 
-        self.user_state.apply_transform(transform);
+        // Apply transform with animation interpolation
+        self.user_state.apply_transform_animated(transform, dramatic_intensity)?;
 
         // Trigger audio feedback
         self.audio_engine.play_gesture_feedback(gesture_type, intensity)?;
@@ -161,21 +185,117 @@ impl Resonant {
     }
 
     fn create_rotation_transform(&self, direction: f32, intensity: f32) -> nalgebra::Matrix4<f32> {
-        use nalgebra::Matrix4;
-        let angle = direction * intensity * 0.1;
-        Matrix4::new_rotation(nalgebra::Vector3::new(0.0, 0.0, angle))
+        use nalgebra::{Matrix4, Vector3};
+
+        // Much more dramatic rotation with time-based evolution
+        let base_angle = direction * intensity * 0.5; // 5x stronger
+        let time_modifier = (self.time * 0.1).sin() * 0.2;
+        let angle = base_angle + time_modifier;
+
+        // Rotate around multiple axes for complex motion
+        let rotation_x = Matrix4::from_axis_angle(&Vector3::x_axis(), angle * 0.3);
+        let rotation_y = Matrix4::from_axis_angle(&Vector3::y_axis(), angle * 0.7);
+        let rotation_z = Matrix4::from_axis_angle(&Vector3::z_axis(), angle);
+
+        rotation_z * rotation_y * rotation_x
     }
 
     fn create_scale_transform(&self, intensity: f32) -> nalgebra::Matrix4<f32> {
         use nalgebra::Matrix4;
-        let scale = 1.0 + intensity * 0.2;
+        let scale = 1.0 + intensity * 1.5; // Much more dramatic scaling
         Matrix4::new_scaling(scale)
     }
 
-    fn create_tilt_transform(&self, direction: f32, intensity: f32) -> nalgebra::Matrix4<f32> {
+    fn create_complex_scale_transform(&self, scale_factor: f32, direction: f32) -> nalgebra::Matrix4<f32> {
         use nalgebra::Matrix4;
-        let angle = direction * intensity * 0.05;
-        Matrix4::new_rotation(nalgebra::Vector3::new(angle, 0.0, 0.0))
+
+        // Non-uniform scaling based on direction
+        let scale_x = scale_factor * (1.0 + direction.cos() * 0.5);
+        let scale_y = scale_factor * (1.0 + direction.sin() * 0.5);
+        let scale_z = scale_factor * (1.0 + (direction * 2.0).cos() * 0.3);
+
+        Matrix4::new_nonuniform_scaling(&nalgebra::Vector3::new(scale_x, scale_y, scale_z))
+    }
+
+    fn create_tilt_transform(&self, direction: f32, intensity: f32) -> nalgebra::Matrix4<f32> {
+        use nalgebra::{Matrix4, Vector3};
+
+        // More dramatic tilting with perspective distortion
+        let angle_x = direction.cos() * intensity * 0.3;
+        let angle_y = direction.sin() * intensity * 0.3;
+        let angle_z = (direction * 0.5).sin() * intensity * 0.2;
+
+        let tilt_x = Matrix4::from_axis_angle(&Vector3::x_axis(), angle_x);
+        let tilt_y = Matrix4::from_axis_angle(&Vector3::y_axis(), angle_y);
+        let tilt_z = Matrix4::from_axis_angle(&Vector3::z_axis(), angle_z);
+
+        tilt_z * tilt_y * tilt_x
+    }
+
+    fn create_4d_twist_transform(&self, direction: f32, intensity: f32) -> nalgebra::Matrix4<f32> {
+        use nalgebra::Matrix4;
+
+        // Complex 4D rotation that creates mesmerizing effects
+        let twist_factor = intensity * 0.4;
+        let time_twist = (self.time * 0.05 + direction).sin() * twist_factor;
+
+        // Create a complex transformation matrix
+        let mut transform = Matrix4::identity();
+
+        // Apply time-based twisted rotation
+        let c = time_twist.cos();
+        let s = time_twist.sin();
+
+        transform[(0, 0)] = c;
+        transform[(0, 1)] = -s;
+        transform[(1, 0)] = s;
+        transform[(1, 1)] = c;
+
+        // Add some 4D perspective effects
+        transform[(2, 3)] = intensity * 0.1;
+
+        transform
+    }
+
+    fn create_color_shift_transform(&self, intensity: f32) -> nalgebra::Matrix4<f32> {
+        use nalgebra::Matrix4;
+
+        // Color transformation matrix that shifts hues dramatically
+        let hue_shift = intensity * std::f32::consts::PI;
+        let cos_h = hue_shift.cos();
+        let sin_h = hue_shift.sin();
+
+        let mut color_matrix = Matrix4::identity();
+
+        // RGB rotation matrix for hue shifting
+        color_matrix[(0, 0)] = cos_h + (1.0 - cos_h) * 0.299;
+        color_matrix[(0, 1)] = (1.0 - cos_h) * 0.587 - sin_h * 0.114;
+        color_matrix[(0, 2)] = (1.0 - cos_h) * 0.114 + sin_h * 0.587;
+
+        color_matrix[(1, 0)] = (1.0 - cos_h) * 0.299 + sin_h * 0.701;
+        color_matrix[(1, 1)] = cos_h + (1.0 - cos_h) * 0.587;
+        color_matrix[(1, 2)] = (1.0 - cos_h) * 0.114 - sin_h * 0.299;
+
+        color_matrix[(2, 0)] = (1.0 - cos_h) * 0.299 - sin_h * 0.587;
+        color_matrix[(2, 1)] = (1.0 - cos_h) * 0.587 + sin_h * 0.299;
+        color_matrix[(2, 2)] = cos_h + (1.0 - cos_h) * 0.114;
+
+        color_matrix
+    }
+
+    fn create_parameter_shift_transform(&self, intensity: f32) -> nalgebra::Matrix4<f32> {
+        use nalgebra::Matrix4;
+
+        // Transform that affects fractal parameters dynamically
+        let param_shift = intensity * 0.2;
+        let mut param_matrix = Matrix4::identity();
+
+        // Encode parameter changes in transformation matrix
+        param_matrix[(3, 0)] = param_shift * (self.time * 0.1).sin();
+        param_matrix[(3, 1)] = param_shift * (self.time * 0.13).cos();
+        param_matrix[(3, 2)] = param_shift * (self.time * 0.07).sin();
+
+        param_matrix
     }
 
     fn create_brightness_transform(&self, intensity: f32) -> nalgebra::Matrix4<f32> {

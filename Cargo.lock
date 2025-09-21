@@ -46,6 +46,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fractal"
+version = "0.1.0"
+dependencies = [
+ "nalgebra",
+ "num-complex",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,6 +196,7 @@ name = "resonant"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "fractal",
  "js-sys",
  "nalgebra",
  "serde",

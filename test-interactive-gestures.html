@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <title>Resonant - Interactive Gesture Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            color: white;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .gesture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .gesture-trail {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 200, 255, 0.8), transparent);
+            pointer-events: none;
+            animation: trail-fade 1s ease-out forwards;
+        }
+
+        @keyframes trail-fade {
+            from { transform: scale(1); opacity: 1; }
+            to { transform: scale(3); opacity: 0; }
+        }
+
+        .gesture-ripple {
+            position: absolute;
+            border: 2px solid rgba(100, 200, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: ripple 0.8s ease-out forwards;
+        }
+
+        @keyframes ripple {
+            from {
+                transform: scale(0);
+                opacity: 1;
+            }
+            to {
+                transform: scale(20);
+                opacity: 0;
+            }
+        }
+
+        .gesture-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 25;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .gesture-feedback.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.5);
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+            cursor: none;
+        }
+
+        .gesture-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px;
+            max-width: 280px;
+            z-index: 15;
+        }
+
+        .gesture-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4CAF50;
+        }
+
+        .gesture-details {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+        }
+
+        .intensity-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            z-index: 15;
+        }
+
+        .intensity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #2196F3, #9C27B0);
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            z-index: 15;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-float 2s ease-out forwards;
+        }
+
+        @keyframes particle-float {
+            from {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: scale(0) translateY(-100px);
+                opacity: 0;
+            }
+        }
+
+        .screen-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .color-explosion {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 100, 255, 0.8), transparent);
+            pointer-events: none;
+            animation: explode 0.6s ease-out forwards;
+        }
+
+        @keyframes explode {
+            from {
+                transform: scale(0);
+                opacity: 1;
+            }
+            to {
+                transform: scale(10);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fractal-canvas"></canvas>
+
+    <div class="gesture-overlay" id="gestureOverlay"></div>
+
+    <div class="gesture-feedback" id="gestureFeedback">✨</div>
+
+    <div class="gesture-info">
+        <div class="gesture-name" id="gestureName">Ready</div>
+        <div class="gesture-details" id="gestureDetails">
+            Touch and drag to create dramatic transformations<br>
+            • Single tap: Random swirl<br>
+            • Drag: Directional rotation<br>
+            • Pinch: Zoom & distort<br>
+            • Long press: Color explosion
+        </div>
+    </div>
+
+    <div class="intensity-bar">
+        <div class="intensity-fill" id="intensityFill"></div>
+    </div>
+
+    <div class="instructions">
+        Drag, tap, pinch, and hold to transform your fractal in real-time
+    </div>
+
+    <script type="module">
+        import init, { Resonant } from './pkg/resonant.js';
+
+        let resonant;
+        let isInitialized = false;
+        let canvas;
+        let gestureOverlay;
+
+        // Touch/gesture tracking
+        let touches = new Map();
+        let lastTouchTime = 0;
+        let gestureIntensity = 0;
+        let longPressTimer = null;
+        let isLongPress = false;
+
+        async function initializeApp() {
+            try {
+                await init();
+
+                canvas = document.getElementById('fractal-canvas');
+                gestureOverlay = document.getElementById('gestureOverlay');
+                setupCanvas();
+
+                resonant = new Resonant('fractal-canvas');
+                isInitialized = true;
+
+                startRenderLoop();
+                setupAdvancedGestureHandling();
+
+                updateGestureInfo('Initialized', 'Fractal engine ready! Start touching to transform.');
+
+            } catch (error) {
+                console.error('Failed to initialize Resonant:', error);
+                updateGestureInfo('Error', `Failed to initialize: ${error.message}`);
+            }
+        }
+
+        function setupCanvas() {
+            const resizeCanvas = () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            };
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        function startRenderLoop() {
+            let lastTime = 0;
+
+            function animate(currentTime) {
+                const deltaTime = currentTime - lastTime;
+                lastTime = currentTime;
+
+                if (resonant && isInitialized) {
+                    try {
+                        resonant.render(deltaTime);
+                    } catch (error) {
+                        console.error('Render error:', error);
+                    }
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function setupAdvancedGestureHandling() {
+            // Prevent default touch behaviors
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+            // Touch start
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+            // Mouse events for desktop
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const now = Date.now();
+
+            for (const touch of e.changedTouches) {
+                touches.set(touch.identifier, {
+                    x: touch.clientX,
+                    y: touch.clientY,
+                    startX: touch.clientX,
+                    startY: touch.clientY,
+                    startTime: now,
+                    lastX: touch.clientX,
+                    lastY: touch.clientY
+                });
+
+                createTouchRipple(touch.clientX, touch.clientY);
+            }
+
+            // Setup long press detection
+            if (touches.size === 1) {
+                longPressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    handleLongPress(Array.from(touches.values())[0]);
+                }, 500);
+            }
+
+            lastTouchTime = now;
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+
+            for (const touch of e.changedTouches) {
+                const stored = touches.get(touch.identifier);
+                if (!stored) continue;
+
+                const deltaX = touch.clientX - stored.lastX;
+                const deltaY = touch.clientY - stored.lastY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                if (distance > 5) {
+                    // Calculate gesture parameters
+                    const totalDeltaX = touch.clientX - stored.startX;
+                    const totalDeltaY = touch.clientY - stored.startY;
+                    const totalDistance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+                    const direction = Math.atan2(totalDeltaY, totalDeltaX);
+                    const intensity = Math.min(totalDistance / 200, 2.0);
+
+                    // Create visual trail
+                    createGestureTrail(touch.clientX, touch.clientY);
+
+                    // Determine gesture type
+                    let gestureType = 'swipe';
+                    if (touches.size === 2) {
+                        gestureType = 'pinch';
+                    }
+
+                    // Apply dramatic gesture
+                    applyDramaticGesture(gestureType, intensity, direction, {
+                        x: touch.clientX,
+                        y: touch.clientY
+                    });
+
+                    // Update stored position
+                    stored.lastX = touch.clientX;
+                    stored.lastY = touch.clientY;
+
+                    updateIntensityBar(intensity);
+                }
+            }
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+
+            for (const touch of e.changedTouches) {
+                const stored = touches.get(touch.identifier);
+                if (!stored) continue;
+
+                const now = Date.now();
+                const duration = now - stored.startTime;
+                const totalDeltaX = touch.clientX - stored.startX;
+                const totalDeltaY = touch.clientY - stored.startY;
+                const totalDistance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+
+                // Handle tap vs drag
+                if (duration < 200 && totalDistance < 10) {
+                    handleTap(touch.clientX, touch.clientY);
+                }
+
+                touches.delete(touch.identifier);
+            }
+
+            isLongPress = false;
+            updateIntensityBar(0);
+        }
+
+        function handleMouseDown(e) {
+            const touch = {
+                clientX: e.clientX,
+                clientY: e.clientY
+            };
+
+            touches.set('mouse', {
+                x: e.clientX,
+                y: e.clientY,
+                startX: e.clientX,
+                startY: e.clientY,
+                startTime: Date.now(),
+                lastX: e.clientX,
+                lastY: e.clientY
+            });
+
+            createTouchRipple(e.clientX, e.clientY);
+        }
+
+        function handleMouseMove(e) {
+            if (!touches.has('mouse')) return;
+
+            const stored = touches.get('mouse');
+            const deltaX = e.clientX - stored.lastX;
+            const deltaY = e.clientY - stored.lastY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            if (distance > 3) {
+                const totalDeltaX = e.clientX - stored.startX;
+                const totalDeltaY = e.clientY - stored.startY;
+                const totalDistance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+                const direction = Math.atan2(totalDeltaY, totalDeltaX);
+                const intensity = Math.min(totalDistance / 150, 2.0);
+
+                createGestureTrail(e.clientX, e.clientY);
+                applyDramaticGesture('swipe', intensity, direction, {
+                    x: e.clientX,
+                    y: e.clientY
+                });
+
+                stored.lastX = e.clientX;
+                stored.lastY = e.clientY;
+                updateIntensityBar(intensity);
+            }
+        }
+
+        function handleMouseUp(e) {
+            touches.delete('mouse');
+            updateIntensityBar(0);
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+
+            const intensity = Math.abs(e.deltaY) / 100;
+            const direction = e.deltaY > 0 ? 0 : Math.PI;
+
+            applyDramaticGesture('pinch', intensity, direction, {
+                x: e.clientX,
+                y: e.clientY
+            });
+
+            createTouchRipple(e.clientX, e.clientY);
+        }
+
+        function handleKeyDown(e) {
+            const intensity = 0.5 + Math.random() * 1.0;
+            const direction = Math.random() * Math.PI * 2;
+
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    applyDramaticGesture('swipe', intensity, direction, {
+                        x: window.innerWidth / 2,
+                        y: window.innerHeight / 2
+                    });
+                    break;
+                case 's':
+                    applyDramaticGesture('smile', intensity, direction);
+                    break;
+                case 't':
+                    applyDramaticGesture('tilt', intensity, direction);
+                    break;
+            }
+        }
+
+        function handleTap(x, y) {
+            const intensity = 0.3 + Math.random() * 0.7;
+            const direction = Math.random() * Math.PI * 2;
+
+            applyDramaticGesture('swipe', intensity, direction, { x, y });
+
+            createColorExplosion(x, y);
+            showGestureFeedback('💫');
+            updateGestureInfo('Tap', `Random swirl applied (${intensity.toFixed(2)})`);
+        }
+
+        function handleLongPress(touch) {
+            const intensity = 1.5;
+            const direction = Math.random() * Math.PI * 2;
+
+            applyDramaticGesture('smile', intensity, direction, {
+                x: touch.x,
+                y: touch.y
+            });
+
+            createColorExplosion(touch.x, touch.y);
+            createParticles(touch.x, touch.y, 20);
+            showGestureFeedback('🌟');
+            updateGestureInfo('Long Press', 'Massive color explosion!');
+
+            // Screen shake effect
+            document.body.classList.add('screen-shake');
+            setTimeout(() => document.body.classList.remove('screen-shake'), 300);
+        }
+
+        function applyDramaticGesture(gestureType, intensity, direction, position) {
+            if (!resonant || !isInitialized) return;
+
+            try {
+                // Apply the gesture with enhanced intensity
+                const enhancedIntensity = intensity * 1.5;
+                resonant.apply_gesture(gestureType, enhancedIntensity, direction);
+
+                // Visual feedback based on gesture type
+                const emojis = {
+                    'swipe': '🌀',
+                    'pinch': '🤏',
+                    'tilt': '📱',
+                    'smile': '😊'
+                };
+
+                if (position) {
+                    createGestureExplosion(position.x, position.y, gestureType);
+                }
+
+                showGestureFeedback(emojis[gestureType] || '✨');
+                updateGestureInfo(
+                    gestureType.charAt(0).toUpperCase() + gestureType.slice(1),
+                    `Intensity: ${intensity.toFixed(2)} | Direction: ${(direction * 180 / Math.PI).toFixed(0)}°`
+                );
+
+            } catch (error) {
+                console.error('Gesture application failed:', error);
+            }
+        }
+
+        function createTouchRipple(x, y) {
+            const ripple = document.createElement('div');
+            ripple.className = 'gesture-ripple';
+            ripple.style.left = (x - 25) + 'px';
+            ripple.style.top = (y - 25) + 'px';
+            ripple.style.width = '50px';
+            ripple.style.height = '50px';
+
+            gestureOverlay.appendChild(ripple);
+
+            setTimeout(() => {
+                if (ripple.parentNode) {
+                    ripple.parentNode.removeChild(ripple);
+                }
+            }, 800);
+        }
+
+        function createGestureTrail(x, y) {
+            const trail = document.createElement('div');
+            trail.className = 'gesture-trail';
+            trail.style.left = (x - 10) + 'px';
+            trail.style.top = (y - 10) + 'px';
+
+            gestureOverlay.appendChild(trail);
+
+            setTimeout(() => {
+                if (trail.parentNode) {
+                    trail.parentNode.removeChild(trail);
+                }
+            }, 1000);
+        }
+
+        function createColorExplosion(x, y) {
+            const explosion = document.createElement('div');
+            explosion.className = 'color-explosion';
+            explosion.style.left = (x - 50) + 'px';
+            explosion.style.top = (y - 50) + 'px';
+
+            const colors = [
+                'rgba(255, 100, 255, 0.8)',
+                'rgba(100, 255, 255, 0.8)',
+                'rgba(255, 255, 100, 0.8)',
+                'rgba(100, 255, 100, 0.8)'
+            ];
+
+            explosion.style.background = `radial-gradient(circle, ${colors[Math.floor(Math.random() * colors.length)]}, transparent)`;
+
+            gestureOverlay.appendChild(explosion);
+
+            setTimeout(() => {
+                if (explosion.parentNode) {
+                    explosion.parentNode.removeChild(explosion);
+                }
+            }, 600);
+        }
+
+        function createGestureExplosion(x, y, gestureType) {
+            const colors = {
+                'swipe': '#2196F3',
+                'pinch': '#4CAF50',
+                'tilt': '#FF9800',
+                'smile': '#E91E63'
+            };
+
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.background = colors[gestureType] || '#fff';
+
+                const angle = (i / 8) * Math.PI * 2;
+                const distance = 50 + Math.random() * 50;
+                particle.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+                particle.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+
+                gestureOverlay.appendChild(particle);
+
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 2000);
+            }
+        }
+
+        function createParticles(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = (x + (Math.random() - 0.5) * 100) + 'px';
+                    particle.style.top = (y + (Math.random() - 0.5) * 100) + 'px';
+
+                    gestureOverlay.appendChild(particle);
+
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.parentNode.removeChild(particle);
+                        }
+                    }, 2000);
+                }, i * 50);
+            }
+        }
+
+        function showGestureFeedback(emoji) {
+            const feedback = document.getElementById('gestureFeedback');
+            feedback.textContent = emoji;
+            feedback.classList.add('show');
+
+            setTimeout(() => {
+                feedback.classList.remove('show');
+            }, 500);
+        }
+
+        function updateGestureInfo(name, details) {
+            document.getElementById('gestureName').textContent = name;
+            document.getElementById('gestureDetails').innerHTML = details;
+        }
+
+        function updateIntensityBar(intensity) {
+            const fill = document.getElementById('intensityFill');
+            fill.style.width = (intensity * 50) + '%'; // Cap at 100% for display
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initializeApp);
+    </script>
+</body>
+</html>

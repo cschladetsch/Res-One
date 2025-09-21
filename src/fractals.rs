@@ -46,9 +46,22 @@ impl FractalGenerator for Mandelbulb {
     }
 
     fn get_color(&self, iterations: i32, distance: f32, pos: &Vector4<f32>) -> Vector3<f32> {
-        let hue = (iterations as f32 * 0.1 + self.time * 0.2 + pos.w * 0.5).sin() * 0.5 + 0.5;
-        let saturation = (1.0 - distance.min(1.0)).powf(0.3);
-        let value = (1.0 - (distance * 8.0).min(1.0)).powf(1.5);
+        // Much more vibrant and dynamic coloring
+        let iteration_factor = iterations as f32 / self.iterations as f32;
+
+        // Multi-layered hue calculation for rich colors
+        let base_hue = (iteration_factor * 6.0 + self.time * 0.5).sin() * 0.5 + 0.5;
+        let depth_hue = (pos.w * 3.0 + self.time * 0.3).cos() * 0.3;
+        let position_hue = ((pos.x + pos.y + pos.z) * 0.1 + self.time * 0.1).sin() * 0.2;
+
+        let hue = (base_hue + depth_hue + position_hue).fract();
+
+        // High saturation for vivid colors
+        let saturation = 0.8 + (1.0 - distance.min(1.0)) * 0.2;
+
+        // Dynamic brightness with pulsing effect
+        let pulse = (self.time * 2.0 + pos.x * 0.5).sin() * 0.3 + 0.7;
+        let value = (1.0 - (distance * 4.0).min(0.9)) * pulse;
 
         hsv_to_rgb(hue, saturation, value)
     }

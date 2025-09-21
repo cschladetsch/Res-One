@@ -163,6 +163,28 @@ impl UserState {
         let _ = self.save_state();
     }
 
+    pub fn apply_transform_animated(&mut self, transform: Matrix4<f32>, intensity: f32) -> Result<(), JsValue> {
+        // Apply immediate transform
+        self.apply_transform(transform);
+
+        // Store intensity for visual feedback
+        // This could be used for particle effects, screen shake, etc.
+        let feedback_data = serde_json::json!({
+            "intensity": intensity,
+            "timestamp": js_sys::Date::now(),
+            "transform_type": "gesture"
+        });
+
+        // Store in localStorage for potential visual feedback systems
+        if let Some(window) = web_sys::window() {
+            if let Ok(Some(storage)) = window.local_storage() {
+                let _ = storage.set_item("last_gesture_feedback", &feedback_data.to_string());
+            }
+        }
+
+        Ok(())
+    }
+
     fn save_state(&self) -> Result<(), JsValue> {
         // Save transform
         let transform_key = format!("resonant_transform_{}", self.current_seed);
