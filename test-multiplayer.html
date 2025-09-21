@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resonant - Multiplayer Test</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid #333;
+        }
+
+        .players {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: calc(100vh - 120px);
+        }
+
+        .player {
+            border-right: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player:last-child {
+            border-right: none;
+        }
+
+        .player-header {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 10;
+            font-size: 12px;
+        }
+
+        .player-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .player-stats {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 10px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: pointer;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 11px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .interaction-log {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 250px;
+            max-height: 400px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 11px;
+            z-index: 20;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .battle-result {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            z-index: 30;
+            min-width: 300px;
+            display: none;
+        }
+
+        .resonance-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 100, 255, 0.3);
+            border: 2px solid rgba(255, 100, 255, 0.6);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            opacity: 0;
+            transition: all 0.5s;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .resonance-indicator.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            .players {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+
+            .player {
+                border-right: none;
+                border-bottom: 1px solid #333;
+            }
+
+            .interaction-log {
+                position: relative;
+                top: auto;
+                right: auto;
+                width: 100%;
+                margin: 10px;
+                max-height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Resonant - Multiplayer Test</h2>
+        <p>Two players sharing mathematical souls through fractal interactions</p>
+    </div>
+
+    <div class="players">
+        <!-- Player 1 -->
+        <div class="player" id="player1">
+            <div class="player-header">
+                <div class="player-name">Alex (Morning Person)</div>
+                <div class="player-stats" id="player1-stats">
+                    Complexity: <span id="p1-complexity">0.0</span> |
+                    Interactions: <span id="p1-interactions">0</span>
+                </div>
+            </div>
+            <canvas id="canvas1" width="400" height="400"></canvas>
+            <div class="resonance-indicator" id="resonance1">⚡</div>
+            <div class="controls">
+                <button class="btn" onclick="sendGesture(1, 'swipe')">🌀 Transform</button>
+                <button class="btn" onclick="sendGesture(1, 'smile')">😊 Smile</button>
+                <button class="btn" onclick="freezeFractal(1)">❄️ Freeze</button>
+            </div>
+        </div>
+
+        <!-- Player 2 -->
+        <div class="player" id="player2">
+            <div class="player-header">
+                <div class="player-name">Jordan (Night Owl)</div>
+                <div class="player-stats" id="player2-stats">
+                    Complexity: <span id="p2-complexity">0.0</span> |
+                    Interactions: <span id="p2-interactions">0</span>
+                </div>
+            </div>
+            <canvas id="canvas2" width="400" height="400"></canvas>
+            <div class="resonance-indicator" id="resonance2">⚡</div>
+            <div class="controls">
+                <button class="btn" onclick="sendGesture(2, 'swipe')">🌀 Transform</button>
+                <button class="btn" onclick="sendGesture(2, 'tilt')">📱 Tilt</button>
+                <button class="btn" onclick="battleFractals()">⚔️ Battle</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="interaction-log">
+        <h4>Interaction Log</h4>
+        <div id="log-content"></div>
+    </div>
+
+    <div class="battle-result" id="battle-result">
+        <h3>Fractal Battle Result</h3>
+        <div id="battle-content"></div>
+        <button class="btn" onclick="closeBattleResult()" style="margin-top: 10px;">Close</button>
+    </div>
+
+    <script type="module">
+        import init, { Resonant } from './pkg/resonant.js';
+
+        let players = {
+            1: null,
+            2: null
+        };
+
+        let interactionCount = { 1: 0, 2: 0 };
+        let lastInteractionTime = Date.now();
+
+        async function initializePlayers() {
+            try {
+                await init();
+
+                // Create player 1 (Alex - morning person, woke up early)
+                players[1] = new Resonant('canvas1');
+
+                // Create player 2 (Jordan - night owl, different seed)
+                players[2] = new Resonant('canvas2');
+
+                // Start render loops
+                startRenderLoop(1);
+                startRenderLoop(2);
+
+                // Setup canvas interactions
+                setupCanvasInteractions();
+
+                // Simulate some initial interactions
+                setTimeout(() => simulateInitialInteractions(), 2000);
+
+                logInteraction("System", "Both players connected. Mathematical souls materializing...");
+
+            } catch (error) {
+                console.error('Failed to initialize players:', error);
+                logInteraction("Error", `Failed to initialize: ${error.message}`);
+            }
+        }
+
+        function startRenderLoop(playerNum) {
+            let lastTime = 0;
+
+            function animate(currentTime) {
+                const deltaTime = currentTime - lastTime;
+                lastTime = currentTime;
+
+                if (players[playerNum]) {
+                    players[playerNum].render(deltaTime);
+                    updatePlayerStats(playerNum);
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function setupCanvasInteractions() {
+            // Player 1 canvas interactions
+            document.getElementById('canvas1').addEventListener('click', () => {
+                sendGesture(1, 'swipe');
+            });
+
+            // Player 2 canvas interactions
+            document.getElementById('canvas2').addEventListener('click', () => {
+                sendGesture(2, 'swipe');
+            });
+        }
+
+        window.sendGesture = function(playerNum, gestureType) {
+            if (!players[playerNum]) return;
+
+            const intensity = 0.3 + Math.random() * 0.7;
+            const direction = Math.random() * Math.PI * 2;
+
+            try {
+                players[playerNum].apply_gesture(gestureType, intensity, direction);
+                interactionCount[playerNum]++;
+
+                // Show resonance effect
+                showResonance(playerNum);
+
+                // Log the interaction
+                const playerName = playerNum === 1 ? "Alex" : "Jordan";
+                const emoji = gestureType === 'smile' ? '😊' : gestureType === 'tilt' ? '📱' : '🌀';
+                logInteraction(playerName, `${emoji} ${gestureType} gesture (intensity: ${intensity.toFixed(2)})`);
+
+                // Check for resonance between players
+                checkForResonance();
+
+                // Simulate echo response from other player
+                if (Math.random() > 0.3) {
+                    setTimeout(() => {
+                        const otherPlayer = playerNum === 1 ? 2 : 1;
+                        const otherName = otherPlayer === 1 ? "Alex" : "Jordan";
+                        sendEchoResponse(otherPlayer);
+                        logInteraction(otherName, `↩️ Echo response to ${playerName}`);
+                    }, 500 + Math.random() * 2000);
+                }
+
+            } catch (error) {
+                console.error(`Failed to apply gesture for player ${playerNum}:`, error);
+            }
+        }
+
+        function sendEchoResponse(playerNum) {
+            if (!players[playerNum]) return;
+
+            const intensity = 0.2 + Math.random() * 0.3;
+            const direction = Math.random() * Math.PI * 2;
+
+            players[playerNum].apply_gesture('swipe', intensity, direction);
+            interactionCount[playerNum]++;
+            showResonance(playerNum);
+        }
+
+        function showResonance(playerNum) {
+            const indicator = document.getElementById(`resonance${playerNum}`);
+            indicator.classList.add('active');
+            setTimeout(() => indicator.classList.remove('active'), 500);
+        }
+
+        function checkForResonance() {
+            const now = Date.now();
+            if (now - lastInteractionTime < 3000) {
+                // Resonance moment! Both players active recently
+                logInteraction("System", "🌟 RESONANCE MOMENT DETECTED! Mathematical harmonics aligning...");
+
+                // Show resonance on both players
+                setTimeout(() => showResonance(1), 100);
+                setTimeout(() => showResonance(2), 300);
+            }
+            lastInteractionTime = now;
+        }
+
+        function updatePlayerStats(playerNum) {
+            try {
+                if (!players[playerNum]) return;
+
+                const info = JSON.parse(players[playerNum].get_fractal_info());
+
+                document.getElementById(`p${playerNum}-complexity`).textContent = info.complexity.toFixed(2);
+                document.getElementById(`p${playerNum}-interactions`).textContent = interactionCount[playerNum];
+
+            } catch (error) {
+                // Silently handle update errors
+            }
+        }
+
+        window.freezeFractal = function(playerNum) {
+            if (!players[playerNum]) return;
+
+            try {
+                const frozenData = players[playerNum].freeze_fractal();
+                const playerName = playerNum === 1 ? "Alex" : "Jordan";
+
+                logInteraction(playerName, `❄️ Fractal frozen for tomorrow's battle`);
+                showResonance(playerNum);
+
+                console.log(`Player ${playerNum} frozen fractal:`, frozenData);
+
+            } catch (error) {
+                console.error(`Failed to freeze fractal for player ${playerNum}:`, error);
+                logInteraction("Error", `Failed to freeze ${playerNum === 1 ? "Alex's" : "Jordan's"} fractal`);
+            }
+        }
+
+        window.battleFractals = function() {
+            if (!players[1] || !players[2]) return;
+
+            try {
+                // Get current states for battle
+                const player1Info = JSON.parse(players[1].get_fractal_info());
+                const player2Info = JSON.parse(players[2].get_fractal_info());
+
+                // Create mock battle data
+                const player1Data = JSON.stringify({
+                    seed: player1Info.seed,
+                    fractal_type: player1Info.type,
+                    complexity_score: player1Info.complexity,
+                    interaction_count: interactionCount[1],
+                    timestamp: Date.now()
+                });
+
+                // Simulate battle
+                const battleResult = players[2].battle_fractals(player1Data);
+                const result = JSON.parse(battleResult);
+
+                // Show battle result
+                showBattleResult(result);
+
+                logInteraction("System", `⚔️ Battle complete! ${result.score_self > result.score_opponent ? 'Jordan' : 'Alex'} wins!`);
+
+            } catch (error) {
+                console.error('Battle failed:', error);
+                logInteraction("Error", `Battle failed: ${error.message}`);
+            }
+        }
+
+        function showBattleResult(result) {
+            const content = document.getElementById('battle-content');
+            content.innerHTML = `
+                <p><strong>Alex Score:</strong> ${result.score_opponent.toFixed(2)}</p>
+                <p><strong>Jordan Score:</strong> ${result.score_self.toFixed(2)}</p>
+                <p><strong>Resonance Factor:</strong> ${result.resonance_factor.toFixed(3)}</p>
+                <p><strong>Winner:</strong> ${result.score_self > result.score_opponent ? 'Jordan' : 'Alex'}</p>
+                <small>Mathematical beauty determines victory through complexity and resonance</small>
+            `;
+            document.getElementById('battle-result').style.display = 'block';
+        }
+
+        window.closeBattleResult = function() {
+            document.getElementById('battle-result').style.display = 'none';
+        }
+
+        function logInteraction(source, message) {
+            const logContent = document.getElementById('log-content');
+            const timestamp = new Date().toLocaleTimeString();
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<strong>${source}</strong> <small>(${timestamp})</small><br>${message}`;
+
+            logContent.insertBefore(entry, logContent.firstChild);
+
+            // Keep only last 20 entries
+            while (logContent.children.length > 20) {
+                logContent.removeChild(logContent.lastChild);
+            }
+        }
+
+        function simulateInitialInteractions() {
+            // Alex (morning person) starts first
+            setTimeout(() => sendGesture(1, 'smile'), 500);
+
+            // Jordan responds
+            setTimeout(() => sendGesture(2, 'swipe'), 1200);
+
+            // More natural interaction flow
+            setTimeout(() => sendGesture(1, 'swipe'), 2000);
+            setTimeout(() => sendGesture(2, 'tilt'), 3500);
+
+            logInteraction("System", "Simulating natural morning interaction flow...");
+        }
+
+        // Auto-generate some activity
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                const player = Math.random() > 0.5 ? 1 : 2;
+                const gestures = ['swipe', 'smile', 'tilt'];
+                const gesture = gestures[Math.floor(Math.random() * gestures.length)];
+                sendGesture(player, gesture);
+            }
+        }, 5000);
+
+        // Initialize when page loads
+        window.addEventListener('load', initializePlayers);
+    </script>
+</body>
+</html>

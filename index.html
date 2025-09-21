@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <title>Resonant - Your Mathematical Soul</title>
+    <meta name="description" content="Experience your daily fractal - a unique mathematical reflection of your existence that evolves with social interactions">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            color: white;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+            cursor: pointer;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .fractal-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            max-width: 280px;
+            pointer-events: auto;
+        }
+
+        .fractal-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .fractal-details {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn.primary {
+            background: rgba(100, 200, 255, 0.3);
+            border-color: rgba(100, 200, 255, 0.5);
+        }
+
+        .gesture-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .gesture-feedback.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .audio-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .audio-btn {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .audio-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 20;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .welcome-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            max-width: 400px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 15;
+            pointer-events: auto;
+        }
+
+        .welcome-message.hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .fractal-info {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                padding: 12px;
+            }
+
+            .controls {
+                bottom: 10px;
+                gap: 8px;
+            }
+
+            .btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .audio-controls {
+                top: 10px;
+                right: 10px;
+            }
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Generating your mathematical soul...</p>
+    </div>
+
+    <!-- Welcome Message -->
+    <div class="welcome-message hidden" id="welcome">
+        <h2 style="margin-bottom: 16px;">Welcome to Resonant</h2>
+        <p style="margin-bottom: 16px; color: rgba(255,255,255,0.8);">
+            This is your daily fractal - a unique mathematical reflection of your existence.
+            Touch, swipe, or smile to transform it. Each gesture creates resonant harmonics
+            between human consciousness.
+        </p>
+        <button class="btn primary" onclick="startExperience()">Enter Your Mathematical Soul</button>
+    </div>
+
+    <!-- Main Canvas -->
+    <canvas id="fractal-canvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div class="ui-overlay">
+        <!-- Fractal Information -->
+        <div class="fractal-info">
+            <div class="fractal-name" id="fractal-name">Loading...</div>
+            <div class="fractal-details" id="fractal-details">
+                Preparing your mathematical signature...
+            </div>
+        </div>
+
+        <!-- Audio Controls -->
+        <div class="audio-controls">
+            <button class="audio-btn" id="audio-toggle" title="Toggle Audio">🔊</button>
+            <button class="audio-btn" id="audio-volume" title="Volume">🎵</button>
+        </div>
+
+        <!-- Gesture Feedback -->
+        <div class="gesture-feedback" id="gesture-feedback">✨</div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            Touch to transform • Swipe to rotate • Hold to freeze
+        </div>
+
+        <!-- Main Controls -->
+        <div class="controls">
+            <button class="btn" onclick="newGesture('swipe')">🌀 Transform</button>
+            <button class="btn" onclick="freezeFractal()">❄️ Freeze</button>
+            <button class="btn primary" onclick="shareExperience()">✨ Share</button>
+            <button class="btn" onclick="showInfo()">ℹ️ Info</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { Resonant } from './pkg/resonant.js';
+
+        let resonant;
+        let lastTime = 0;
+        let isAudioEnabled = false;
+        let canvas;
+
+        async function initializeApp() {
+            try {
+                await init();
+
+                canvas = document.getElementById('fractal-canvas');
+                setupCanvas();
+
+                resonant = new Resonant('fractal-canvas');
+
+                // Hide loading, show welcome
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('welcome').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Failed to initialize Resonant:', error);
+                document.getElementById('loading').innerHTML = '<p>Failed to load. Please refresh.</p>';
+            }
+        }
+
+        function setupCanvas() {
+            const resizeCanvas = () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            };
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        window.startExperience = function() {
+            document.getElementById('welcome').classList.add('hidden');
+            startRenderLoop();
+            setupGestureHandling();
+            updateFractalInfo();
+        }
+
+        function startRenderLoop() {
+            function animate(currentTime) {
+                const deltaTime = currentTime - lastTime;
+                lastTime = currentTime;
+
+                if (resonant) {
+                    resonant.render(deltaTime);
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function setupGestureHandling() {
+            let touchStart = { x: 0, y: 0 };
+            let isTouch = false;
+
+            // Touch events for mobile
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                touchStart = { x: touch.clientX, y: touch.clientY };
+                isTouch = true;
+                showGestureEffect('👆');
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!isTouch) return;
+
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - touchStart.x;
+                const deltaY = touch.clientY - touchStart.y;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                if (distance > 30) {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    const intensity = Math.min(distance / 200, 1.0);
+                    handleGesture('swipe', intensity, angle);
+                    touchStart = { x: touch.clientX, y: touch.clientY };
+                }
+            });
+
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                isTouch = false;
+            });
+
+            // Mouse events for desktop
+            canvas.addEventListener('click', (e) => {
+                const intensity = Math.random();
+                const direction = Math.random() * Math.PI * 2;
+                handleGesture('swipe', intensity, direction);
+                showGestureEffect('✨');
+            });
+
+            // Keyboard events
+            document.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        newGesture('swipe');
+                        break;
+                    case 'f':
+                        freezeFractal();
+                        break;
+                    case 's':
+                        shareExperience();
+                        break;
+                }
+            });
+        }
+
+        function handleGesture(type, intensity, direction) {
+            if (resonant) {
+                resonant.apply_gesture(type, intensity, direction);
+                updateFractalInfo();
+            }
+        }
+
+        function showGestureEffect(icon) {
+            const feedback = document.getElementById('gesture-feedback');
+            feedback.textContent = icon;
+            feedback.classList.add('show');
+            setTimeout(() => feedback.classList.remove('show'), 300);
+        }
+
+        window.newGesture = function(type) {
+            const intensity = 0.5 + Math.random() * 0.5;
+            const direction = Math.random() * Math.PI * 2;
+            handleGesture(type, intensity, direction);
+            showGestureEffect('🌀');
+        }
+
+        window.freezeFractal = function() {
+            if (resonant) {
+                try {
+                    const frozenData = resonant.freeze_fractal();
+                    showGestureEffect('❄️');
+                    console.log('Fractal frozen:', frozenData);
+
+                    // Show success message
+                    setTimeout(() => {
+                        alert('Fractal frozen! It will battle tomorrow\'s fractal.');
+                    }, 500);
+                } catch (error) {
+                    console.error('Failed to freeze fractal:', error);
+                }
+            }
+        }
+
+        window.shareExperience = function() {
+            if (resonant) {
+                const shareUrl = resonant.get_share_url();
+
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'My Resonant Fractal',
+                        text: 'Experience my mathematical soul - this is today\'s fractal reflection of my existence',
+                        url: shareUrl
+                    });
+                } else {
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        showGestureEffect('📋');
+                        setTimeout(() => {
+                            alert('Share link copied to clipboard!');
+                        }, 300);
+                    });
+                }
+            }
+        }
+
+        window.showInfo = function() {
+            if (resonant) {
+                const info = JSON.parse(resonant.get_fractal_info());
+                const message = `Fractal Type: ${info.type}
+Complexity Score: ${info.complexity.toFixed(2)}
+Interactions Today: ${info.interactions_today}
+Mathematical Signature: ${info.seed}
+
+This fractal is your unique mathematical reflection. Each gesture transforms it, creating resonant harmonics with the universe.`;
+                alert(message);
+            }
+        }
+
+        function updateFractalInfo() {
+            if (resonant) {
+                try {
+                    const info = JSON.parse(resonant.get_fractal_info());
+
+                    document.getElementById('fractal-name').textContent = info.type + ' Fractal';
+                    document.getElementById('fractal-details').innerHTML = `
+                        <div>Complexity: ${info.complexity.toFixed(2)}</div>
+                        <div>Interactions: ${info.interactions_today}</div>
+                        <div>Seed: ${info.seed}</div>
+                        <div style="margin-top: 8px; font-size: 11px; color: rgba(255,255,255,0.5);">
+                            Your mathematical soul evolving through social resonance
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Failed to update fractal info:', error);
+                }
+            }
+        }
+
+        // Audio controls
+        document.getElementById('audio-toggle').addEventListener('click', () => {
+            isAudioEnabled = !isAudioEnabled;
+            document.getElementById('audio-toggle').textContent = isAudioEnabled ? '🔊' : '🔇';
+            // TODO: Implement audio toggle when Web Audio API is fixed
+        });
+
+        // Initialize when page loads
+        window.addEventListener('load', initializeApp);
+
+        // Handle URL parameters for shared fractals
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('seed') || urlParams.has('f')) {
+            console.log('Loading shared fractal...');
+            // TODO: Implement shared fractal loading
+        }
+
+        // Prevent context menu on long press
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>

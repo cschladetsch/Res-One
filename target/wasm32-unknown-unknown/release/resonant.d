@@ -1,0 +1,1 @@
+C:\Users\chris\local\repos\Resonant\target\wasm32-unknown-unknown\release\resonant.wasm: C:\Users\chris\local\repos\Resonant\src\audio.rs C:\Users\chris\local\repos\Resonant\src\fractals.rs C:\Users\chris\local\repos\Resonant\src\lib.rs C:\Users\chris\local\repos\Resonant\src\network.rs C:\Users\chris\local\repos\Resonant\src\user.rs
