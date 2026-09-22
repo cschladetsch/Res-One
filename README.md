@@ -283,6 +283,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 > "Mathematics is the only truly universal language. Resonant makes that language visible, audible, and shareable. Every human becomes a node in the most beautiful network ever created: the mathematical symphony of conscious beings learning to resonate."
 
+📖 [Docs & diagrams](https://cschladetsch.github.io/Res-One/)
+
+
 Read our full [MANIFESTO](MANIFESTO.md) for the complete vision behind Resonant.
 
 ## 🔗 Links
